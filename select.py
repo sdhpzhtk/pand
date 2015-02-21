@@ -12,7 +12,7 @@ def read_graph(fname):
     Returns
         A dict of adjacency lists.
     '''
-    with open('graph/' + fname, 'r') as fin:
+    with open('graph/' + fname + '.json' , 'r') as fin:
         data = json.load(fin)
     
     graph = {int(i): [int(j) for j in data[i]] for i in data}
