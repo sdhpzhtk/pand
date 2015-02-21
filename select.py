@@ -43,7 +43,8 @@ def deg(adj_dict, n):
     '''
 
     degs = sorted([(id, len(adj_dict[id])) for id in adj_dict],
-                  key=lambda x: x[1])
+                  key=lambda x: x[1], reverse=True)
+    print degs
     seeds = [degs[i][0] for i in range(n)]
     return seeds * 50
 
