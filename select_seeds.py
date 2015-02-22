@@ -44,10 +44,14 @@ def top_n_measure(measure, graph, n, return_subgraph=False):
     Returns:
     
     '''
+    print measure
+    
+    if measure == nx.core_number:
+        graph = graph.remove_edges_from(graph.selfloop_edges())
+    
     vals = measure(graph)
     tops = heapq.nlargest(n, vals.items(), key=lambda x: x[1])
     tops = [tup[0] for tup in tops]
-
 
     if not return_subgraph:
         return tops
@@ -64,6 +68,7 @@ def top_measure_same_50(seeds, n):
     Returns:
         a list of node id's
     '''
+    print seeds
     return seeds[:n] * 50
 
 def top_measure_rand_50(tops, n):
@@ -87,7 +92,7 @@ measures = {'d': ('deg', nx.degree_centrality),
             'b': ('btw', nx.betweenness_centrality),
             'c': ('clu', nx.clustering),
             'l': ('clo', nx.closeness_centrality),
-            'k': ('ksh', nx.core_number)
+            'k': ('ksh', nx.core_number),
            }
 
 # A dict of function for generating 50 rounds of seeds
@@ -99,22 +104,20 @@ gen_50 = {'': top_measure_same_50,
 # A dict of all algorithms for selection. {flag: (folder name, function name)}
 algs = {}
 
+
 # Algorithms for pure measures
+
+pure_measure_func = lambda m_f: (lambda g, n: top_measure_same_50(top_n_measure(m_f, g.copy(), n), n))
 for m in measures:
     m_name, m_f = measures[m]
-    algs[m] = (m_name, lambda graph, n: top_measure_same_50(top_n_measure(m_f, graph.copy(), n), n))
+    algs[m] = (m_name, pure_measure_func(m_f))
 
-# Algorithms for pure measures with random generation (using top 1.5 * n nodes)
-'''for m in measures:
-    m_name, m_f = measures[m]
-    g = 'p'
-    gen_f = gen_50['p']
-    algs[m+g] = (m_name + g, lambda graph, n: gen_f(top_n_measure(m_f, graph.copy(), int(n * 1.5)), n))'''
 
+deg_flter = lambda m_f: (lambda g, n: top_measure_same_50(top_n_measure(m_f, top_n_measure(nx.degree_centrality, g.copy(), 3000, True)[1].copy(), n), n))
 # Algorithms for first degree measure filter and then with other measures and random generation
 for m in measures:
     m_name, m_f = measures[m]
-    algs['d'+m] = ('deg' + m_name , lambda graph, n: top_measure_same_50(top_n_measure(m_f, top_n_measure(nx.degree_centrality, graph.copy(), 3000, True)[1], n), n))
+    algs['d'+m] = ('deg' + m_name , deg_flter(m_f))
 
 if __name__ == '__main__':
     # name of the graph, excluding '.json'
@@ -125,27 +128,27 @@ if __name__ == '__main__':
     adj_list = read_graph(g_name)
     graph = nx.Graph(adj_list)
     
-    top_n_measure(nx.degree_centrality, graph.copy(), 10)
-    
     competitors = {}
     if argv[2] == 'all':
         flagged_algs = algs.keys()
     else:
         flagged_algs = argv[2:]
 
-    print flagged_algs
     for flag in flagged_algs:
         if flag in algs:
+            print flag
             folder, f = algs[flag]
             seeds = f(graph.copy(), n)
             write_seed(folder, g_name, seeds)
             competitors[folder] = [seeds[n * i : n * (i + 1)] for i in range(50)]
+            print '-----'
 
-    '''results = sim.run(adj_list, competitors, 1)
+
+    results = sim.run(adj_list, competitors, 1)
     print results
 
 
-    for alg in competitors:
+    '''for alg in competitors:
         competitors[alg] = 0
     for result in results:
         competitors[max(result[0].items(), key=lambda x: x[1])[0]] += 1
