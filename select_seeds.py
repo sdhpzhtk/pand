@@ -87,6 +87,7 @@ measures = {'d': ('deg', nx.degree_centrality),
             'b': ('btw', nx.betweenness_centrality),
             'c': ('clu', nx.clustering),
             'l': ('clo', nx.closeness_centrality),
+            'k': ('ksh', nx.core_number)
            }
 
 # A dict of function for generating 50 rounds of seeds
@@ -104,16 +105,16 @@ for m in measures:
     algs[m] = (m_name, lambda graph, n: top_measure_same_50(top_n_measure(m_f, graph.copy(), n), n))
 
 # Algorithms for pure measures with random generation (using top 1.5 * n nodes)
-for m in measures:
+'''for m in measures:
     m_name, m_f = measures[m]
     g = 'p'
     gen_f = gen_50['p']
-    algs[m+g] = (m_name + g, lambda graph, n: gen_f(top_n_measure(m_f, graph.copy(), int(n * 1.5)), n))
+    algs[m+g] = (m_name + g, lambda graph, n: gen_f(top_n_measure(m_f, graph.copy(), int(n * 1.5)), n))'''
 
 # Algorithms for first degree measure filter and then with other measures and random generation
 for m in measures:
     m_name, m_f = measures[m]
-    algs['d'+m] = ('deg' + m_name , lambda graph, n: top_measure_same_50(top_n_measure(m_f, top_n_measure(nx.degree_centrality, graph.copy(), n * 3, True)[1], n), n))
+    algs['d'+m] = ('deg' + m_name , lambda graph, n: top_measure_same_50(top_n_measure(m_f, top_n_measure(nx.degree_centrality, graph.copy(), 3000, True)[1], n), n))
 
 if __name__ == '__main__':
     # name of the graph, excluding '.json'
@@ -124,12 +125,15 @@ if __name__ == '__main__':
     adj_list = read_graph(g_name)
     graph = nx.Graph(adj_list)
     
+    top_n_measure(nx.degree_centrality, graph.copy(), 10)
+    
     competitors = {}
     if argv[2] == 'all':
         flagged_algs = algs.keys()
     else:
         flagged_algs = argv[2:]
 
+    print flagged_algs
     for flag in flagged_algs:
         if flag in algs:
             folder, f = algs[flag]
@@ -137,11 +141,14 @@ if __name__ == '__main__':
             write_seed(folder, g_name, seeds)
             competitors[folder] = [seeds[n * i : n * (i + 1)] for i in range(50)]
 
-    results = sim.run(adj_list, competitors, 50)
+    '''results = sim.run(adj_list, competitors, 1)
+    print results
+
+
     for alg in competitors:
         competitors[alg] = 0
     for result in results:
         competitors[max(result[0].items(), key=lambda x: x[1])[0]] += 1
-    print competitors
+    print competitors'''
 
 
