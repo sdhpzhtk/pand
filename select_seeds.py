@@ -48,6 +48,7 @@ def top_n_measure(measure, graph, n, return_subgraph=False):
     tops = heapq.nlargest(n, vals.items(), key=lambda x: x[1])
     tops = [tup[0] for tup in tops]
 
+
     if not return_subgraph:
         return tops
     else:
@@ -100,7 +101,7 @@ algs = {}
 # Algorithms for pure measures
 for m in measures:
     m_name, m_f = measures[m]
-    algs[m] = (m_name, lambda graph, n: top_measure_same_50(top_n_measure(m_f, graph.copy(), n)), n))
+    algs[m] = (m_name, lambda graph, n: top_measure_same_50(top_n_measure(m_f, graph.copy(), n), n))
 
 # Algorithms for pure measures with random generation (using top 1.5 * n nodes)
 for m in measures:
@@ -112,8 +113,7 @@ for m in measures:
 # Algorithms for first degree measure filter and then with other measures and random generation
 for m in measures:
     m_name, m_f = measures[m]
-    gen_f = gen_50['p']
-    algs['d'+m+'p'] = ('deg' + m_name + 'p', lambda graph, n: gen_f(top_n_measure(m_f, top_n_measure(nx.degree_centrality, graph.copy(), n * 3, True)[1], int(n * 1.5)), n))
+    algs['d'+m] = ('deg' + m_name , lambda graph, n: top_measure_same_50(top_n_measure(m_f, top_n_measure(nx.degree_centrality, graph.copy(), n * 3, True)[1], n), n))
 
 if __name__ == '__main__':
     # name of the graph, excluding '.json'
