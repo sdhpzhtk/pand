@@ -31,5 +31,12 @@ for i in range(50):
 
 data['CaltechFTW'] = seed_nodes
 
+unique_seeds = set(seed_nodes)
+for opp_seeds in data.itervalues():
+    unique_seeds = unique_seeds.difference(set(opp_seeds[0]))
+
+print len(unique_seeds)
+print unique_seeds
+
 results = sim(graph, data, 1)
 print results
