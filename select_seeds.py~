@@ -47,10 +47,16 @@ def top_n_measure(measure, graph, n, return_subgraph=False):
   #  print measure
     
     if measure == nx.core_number:
+<<<<<<< HEAD
        graph.remove_edges_from(graph.selfloop_edges())
+=======
+        graph.remove_edges_from(graph.selfloop_edges())
+>>>>>>> 287e837942ead27188ef9ce33422c752db233295
     
     vals = measure(graph)
     tops = heapq.nlargest(n, vals.items(), key=lambda x: x[1])
+    if measure != nx.degree_centrality:
+        print tops
     tops = [tup[0] for tup in tops]
 
     if not return_subgraph:
@@ -98,6 +104,7 @@ def alt_deg(graph, n):
 
     seeds = []
     count = 0
+    i = 0
     while count < n/2:
         maxn = None
         for neigh in graph.neighbors(tops[i]):
@@ -108,6 +115,7 @@ def alt_deg(graph, n):
             seeds.append(maxn)
             seeds.append(tops[i])
             count += 1
+        i += 1
 
     if (n % 2 == 1):
         seeds.append(tops[n/2 + 1])
