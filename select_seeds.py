@@ -1,4 +1,5 @@
 import json
+import os
 from sys import *
 import random
 import sim
@@ -18,6 +19,21 @@ def read_graph(fname):
         data = json.load(fin)
 
     return data
+
+def read_seeds(folder, gname):
+    '''Reads the seeds from file.
+    
+    Args:
+        folder: string, the folder name/strategy name
+        gname: string, the file name of the graph
+    
+    Returns:
+        a list of node id's in unicode
+    '''
+
+    with open('%s/%s.txt' %(folder, gname)) as fin:
+        seeds = map(lambda line: unicode(line.strip()), fin.readlines())
+    return seeds
 
 def write_seed(alg_name, fname, seeds):
     ''' Writes the selected seeds to file.
@@ -90,7 +106,7 @@ def top_measure_rand_50(tops, n):
         seeds += random.sample(tops, n)
     return seeds
 
-def alt_deg(graph, n):
+def alt_deg2(graph, n):
     """ Return num_seeds/2 highest degree nodes and ...."""
     degs = nx.degree_centrality(graph)
     tops = heapq.nlargest(2*n, degs.items(), key=lambda x: x[1])
@@ -108,6 +124,31 @@ def alt_deg(graph, n):
             neighs = graph.neighbors(tops[i])
             nei_deg = [(node, degs[node]) for node in neighs if node in degs]
             two_tops = heapq.nlargest(2, nei_deg, key=lambda x: x[1])
+            for node, _ in two_tops:
+                seeds.add(node)
+                del degs[node]
+        i += 1
+
+    return top_measure_same_50(list(seeds), n)
+
+def alt_deg1(graph, n):
+    """ Return num_seeds/2 highest degree nodes and ...."""
+    degs = nx.degree_centrality(graph)
+    tops = heapq.nlargest(2*n, degs.items(), key=lambda x: x[1])
+    tops = [tup[0] for tup in tops]
+
+    for node in tops[:n]:
+        del degs[node]
+
+    seeds = set()
+    i = 0
+    while len(seeds) < n:
+        if i >= n:
+            seeds.add(tops[i])
+        else:
+            neighs = graph.neighbors(tops[i])
+            nei_deg = [(node, degs[node]) for node in neighs if node in degs]
+            two_tops = heapq.nlargest(1, nei_deg, key=lambda x: x[1])
             for node, _ in two_tops:
                 seeds.add(node)
                 del degs[node]
@@ -148,7 +189,8 @@ deg_flter = lambda m_f: (lambda g, n: top_measure_same_50(top_n_measure(m_f, top
 for m in measures:
     m_name, m_f = measures[m]
     algs['d'+m] = ('deg' + m_name , deg_flter(m_f))
-algs['ad'] = ('altdeg', alt_deg)
+algs['a2'] = ('altdeg2', alt_deg2)
+algs['a1'] = ('altdeg1', alt_deg1)
 
 
 if __name__ == '__main__':
@@ -170,7 +212,10 @@ if __name__ == '__main__':
         if flag in algs:
             print flag
             folder, f = algs[flag]
-            seeds = f(graph.copy(), n)
+            if os.path.exists('%s/%s.txt' %(folder, g_name)):
+                seeds = read_seeds(folder, g_name)
+            else:
+                seeds = f(graph.copy(), n)
             write_seed(folder, g_name, seeds)
             competitors[folder] = [seeds[n * i : n * (i + 1)] for i in range(50)]
             print '-----'
