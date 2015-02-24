@@ -93,31 +93,27 @@ def top_measure_rand_50(tops, n):
 def alt_deg(graph, n):
     """ Return num_seeds/2 highest degree nodes and ...."""
     degs = nx.degree_centrality(graph)
-    tops = heapq.nlargest(n, degs.items(), key=lambda x: x[1])
+    tops = heapq.nlargest(2*n, degs.items(), key=lambda x: x[1])
     tops = [tup[0] for tup in tops]
 
-    for node in tops:
+    for node in tops[:n]:
         del degs[node]
 
-    seeds = []
-    count = 0
+    seeds = set()
     i = 0
-    while count < n/2:
-        maxn = None
-        for neigh in graph.neighbors(tops[i]):
-            if (neigh in degs and (neigh not in seeds) and \
-                (maxn is None or degs[neigh] > degs[maxn])):
-                maxn = neigh
-        if maxn != None:          
-            seeds.append(maxn)
-            seeds.append(tops[i])
-            count += 1
+    while len(seeds) < n:
+        if i >= n:
+            seeds.add(tops[i])
+        else:
+            neighs = graph.neighbors(tops[i])
+            nei_deg = [(node, degs[node]) for node in neighs if node in degs]
+            two_tops = heapq.nlargest(2, nei_deg, key=lambda x: x[1])
+            for node, _ in two_tops:
+                seeds.add(node)
+                del degs[node]
         i += 1
 
-    if (n % 2 == 1):
-        seeds.append(tops[n/2 + 1])
-
-    return seeds * 50
+    return top_measure_same_50(list(seeds), n)
     
                      
 # A dict of all the centrality measures. {measure_flag: (measure_name, measure_function)}
