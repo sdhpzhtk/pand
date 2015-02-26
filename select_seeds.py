@@ -68,8 +68,6 @@ def top_n_measure(measure, graph, n, return_subgraph=False):
 
     vals = measure(graph)
     tops = heapq.nlargest(n, vals.items(), key=lambda x: x[1])
-    if measure != nx.degree_centrality:
-        print tops
     tops = [tup[0] for tup in tops]
 
     if not return_subgraph:

@@ -30,6 +30,7 @@ seeds = seeds[0:50]
 seed_nodes = []
 for i in range(50):
     seed_nodes.append(list(seeds))
+print seed_nodes
 
 data['CaltechFTW'] = seed_nodes
 
