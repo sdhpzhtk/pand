@@ -176,7 +176,16 @@ def alt_deg1(graph, n):
         i += 1
 
     return top_measure_same_50(list(seeds), n)
-    
+
+
+def alt2_ksh(graph, n):
+    global algs
+    tops = set(alt_deg2(graph, n)[:n])
+    tops.union(set(algs['dk'][1](graph, n)[:n]))
+    seeds = []
+    for _ in range(50):
+        seeds += random.sample(tops, n)
+    return seeds
                      
 # A dict of all the centrality measures. {measure_flag: (measure_name, measure_function)}
 measures = {'d': ('deg', nx.degree_centrality),
@@ -212,6 +221,7 @@ for m in measures:
     algs['d'+m] = ('deg' + m_name , deg_flter(m_f))
 algs['a2'] = ('altdeg2', alt_deg2)
 algs['a1'] = ('altdeg1', alt_deg1)
+algs['a2k'] = ('alt2ksh', alt2_ksh)
 
 algs['ks'] = ('kshell_support', kshell_support)
 
