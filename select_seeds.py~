@@ -1,4 +1,5 @@
 import json
+import os
 from sys import *
 import random
 import sim
@@ -18,6 +19,21 @@ def read_graph(fname):
         data = json.load(fin)
 
     return data
+
+def read_seeds(folder, gname):
+    '''Reads the seeds from file.
+    
+    Args:
+        folder: string, the folder name/strategy name
+        gname: string, the file name of the graph
+    
+    Returns:
+        a list of node id's in unicode
+    '''
+
+    with open('%s/%s.txt' %(folder, gname)) as fin:
+        seeds = map(lambda line: unicode(line.strip()), fin.readlines())
+    return seeds
 
 def write_seed(alg_name, fname, seeds):
     ''' Writes the selected seeds to file.
@@ -47,12 +63,9 @@ def top_n_measure(measure, graph, n, return_subgraph=False):
   #  print measure
     
     if measure == nx.core_number:
-<<<<<<< HEAD
-       graph.remove_edges_from(graph.selfloop_edges())
-=======
+
         graph.remove_edges_from(graph.selfloop_edges())
->>>>>>> 287e837942ead27188ef9ce33422c752db233295
-    
+
     vals = measure(graph)
     tops = heapq.nlargest(n, vals.items(), key=lambda x: x[1])
     if measure != nx.degree_centrality:
@@ -93,34 +106,81 @@ def top_measure_rand_50(tops, n):
         seeds += random.sample(tops, n)
     return seeds
 
-def alt_deg(graph, n):
+def kshell_support(graph, n):
+    """Selects top n/5 k-value nodes, along with 4 neighbors."""
+    tops = algs['k'][1](graph, n)
+    seeds = set([])
+
+    i = 0
+    j = 0
+    while len(seeds) < n:
+        seeds.add(tops[i])
+        neighs = graph.neighbors(tops[i])
+        seeds.add(neighs[j])
+
+        if j < 1	:
+            j += 1
+        else:
+            i += 1
+            j = 0
+
+    return top_measure_same_50(list(seeds), n)
+        
+
+def alt_deg2(graph, n):
     """ Return num_seeds/2 highest degree nodes and ...."""
     degs = nx.degree_centrality(graph)
-    tops = heapq.nlargest(n, degs.items(), key=lambda x: x[1])
+    tops = heapq.nlargest(2*n, degs.items(), key=lambda x: x[1])
     tops = [tup[0] for tup in tops]
 
-    for node in tops:
+    for node in tops[:n]:
         del degs[node]
 
-    seeds = []
-    count = 0
+    seeds = set()
     i = 0
-    while count < n/2:
-        maxn = None
-        for neigh in graph.neighbors(tops[i]):
-            if (neigh in degs and (neigh not in seeds) and \
-                (maxn is None or degs[neigh] > degs[maxn])):
-                maxn = neigh
-        if maxn != None:          
-            seeds.append(maxn)
-            seeds.append(tops[i])
-            count += 1
+    while len(seeds) < n:
+        if i >= n:
+            seeds.add(tops[i])
+        else:
+            neighs = graph.neighbors(tops[i])
+            nei_deg = [(node, degs[node]) for node in neighs if node in degs]
+            two_tops = heapq.nlargest(10, nei_deg, key=lambda x: x[1])
+
+            k = 0
+            for node, _ in two_tops:
+                if k < 8:
+                    k += 1
+                else:
+                    seeds.add(node)
+                    del degs[node]
         i += 1
 
-    if (n % 2 == 1):
-        seeds.append(tops[n/2 + 1])
+    return top_measure_same_50(list(seeds), n)
 
-    return seeds * 50
+def alt_deg1(graph, n):
+    """ Return num_seeds/2 highest degree nodes and ...."""
+    degs = nx.degree_centrality(graph)
+    tops = heapq.nlargest(2*n, degs.items(), key=lambda x: x[1])
+    tops = [tup[0] for tup in tops]
+
+    for node in tops[:n]:
+        del degs[node]
+
+    seeds = set()
+    i = 0
+    while len(seeds) < n:
+        if i >= n:
+            seeds.add(tops[i])
+        else:
+            neighs = graph.neighbors(tops[i])
+            nei_deg = [(node, degs[node]) for node in neighs if node in degs]
+            two_tops = heapq.nlargest(1, nei_deg, key=lambda x: x[1])
+            for node, _ in two_tops:
+                seeds.add(node)
+                del degs[node]
+        i += 1
+
+    return top_measure_same_50(list(seeds), n)
     
                      
 # A dict of all the centrality measures. {measure_flag: (measure_name, measure_function)}
@@ -155,7 +215,10 @@ deg_flter = lambda m_f: (lambda g, n: top_measure_same_50(top_n_measure(m_f, top
 for m in measures:
     m_name, m_f = measures[m]
     algs['d'+m] = ('deg' + m_name , deg_flter(m_f))
-algs['ad'] = ('altdeg', alt_deg)
+algs['a2'] = ('altdeg2', alt_deg2)
+algs['a1'] = ('altdeg1', alt_deg1)
+
+algs['ks'] = ('kshell_support', kshell_support)
 
 
 if __name__ == '__main__':
@@ -177,7 +240,10 @@ if __name__ == '__main__':
         if flag in algs:
             print flag
             folder, f = algs[flag]
-            seeds = f(graph.copy(), n)
+            if os.path.exists('%s/%s.txt' %(folder, g_name)):
+                seeds = read_seeds(folder, g_name)
+            else:
+                seeds = f(graph.copy(), n)
             write_seed(folder, g_name, seeds)
             competitors[folder] = [seeds[n * i : n * (i + 1)] for i in range(50)]
             print '-----'

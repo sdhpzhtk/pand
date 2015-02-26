@@ -106,6 +106,27 @@ def top_measure_rand_50(tops, n):
         seeds += random.sample(tops, n)
     return seeds
 
+def kshell_support(graph, n):
+    """Selects top n/5 k-value nodes, along with 4 neighbors."""
+    tops = algs['k'][1](graph, n)
+    seeds = set([])
+
+    i = 0
+    j = 0
+    while len(seeds) < n:
+        seeds.add(tops[i])
+        neighs = graph.neighbors(tops[i])
+        seeds.add(neighs[j])
+
+        if j < 3:
+            j += 1
+        else:
+            i += 1
+            j = 0
+
+    return top_measure_same_50(list(seeds), n)
+        
+
 def alt_deg2(graph, n):
     """ Return num_seeds/2 highest degree nodes and ...."""
     degs = nx.degree_centrality(graph)
@@ -191,6 +212,8 @@ for m in measures:
     algs['d'+m] = ('deg' + m_name , deg_flter(m_f))
 algs['a2'] = ('altdeg2', alt_deg2)
 algs['a1'] = ('altdeg1', alt_deg1)
+
+algs['ks'] = ('kshell_support', kshell_support)
 
 
 if __name__ == '__main__':
