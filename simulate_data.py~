@@ -37,7 +37,7 @@ num_unique_seeds = {}
 for team in data.iterkeys():
     num_unique_seeds[team] = []
 
-    for i in range(50):
+    for round in range(50):
         team_seeds = set(data[team][i])
 
         for opponent, opp_seeds in data.iteritems():
