@@ -34,6 +34,8 @@ print seed_nodes
 
 data['CaltechFTW'] = seed_nodes
 
+# Compute the number of unique seeds each team would have had in the previous
+# competition if we chose seeds based on the selected strategy.
 num_unique_seeds = {}
 for team in data.iterkeys():
     num_unique_seeds[team] = []
@@ -49,6 +51,7 @@ for team in data.iterkeys():
 
 print num_unique_seeds
 
+# Determine results of past competition had we used the selected strategy.
 results = sim.run(graph, data, 5)
 for i in range(5):
     print results[i][0]

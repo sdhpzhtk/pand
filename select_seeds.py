@@ -1,3 +1,8 @@
+"""Takes a graph file (adjacency lists in JSON) and produces the required number
+of contagion seed nodes based on a selected strategy. The seed nodes are
+outputted into a folder of the corresponding strategy. There is no variability
+in the seed nodes in the 50 rounds per game."""
+
 import json
 import os
 from sys import *
@@ -55,15 +60,13 @@ def top_n_measure(measure, graph, n, return_subgraph=False):
         measure: the centrality measure function, takes in a nx.Graph
         graph: an nx.Graph object
         n: int, the top n nodes that should be returned
-        return_subgraph: bool, True if want to returnthe subgraph of the top nodes
+        return_subgraph: bool, True to return subgraph of top nodes
     
     Returns:
     
     '''
-  #  print measure
-    
+    # Remove loops if measuring k-values (core numbers).
     if measure == nx.core_number:
-
         graph.remove_edges_from(graph.selfloop_edges())
 
     vals = measure(graph)
@@ -85,7 +88,6 @@ def top_measure_same_50(seeds, n):
     Returns:
         a list of node id's
     '''
-  #  print seeds
     return seeds[:n] * 50
 
 def top_measure_rand_50(tops, n):
@@ -126,14 +128,21 @@ def kshell_support(graph, n):
         
 
 def alt_deg2(graph, n):
-    """ Return num_seeds/2 highest degree nodes and ...."""
+    """ Return two highest-degree neighbors of the top highest-degree nodes.
+    This strategy aims to capture the high-degree nodes after one iteration,
+    since the high-degree nodes are generally unattainable as seed nodes."""
+    
+    # Gather top 2n highest-degree nodes.
     degs = nx.degree_centrality(graph)
     tops = heapq.nlargest(2*n, degs.items(), key=lambda x: x[1])
     tops = [tup[0] for tup in tops]
 
+    # Do not consider the top 2n highest-degree nodes as possible seeds.
     for node in tops[:n]:
         del degs[node]
 
+    # Gather the two highest-degree neighbors from the highest-degree nodes,
+    # until n nodes have been accumulated.
     seeds = set()
     i = 0
     while len(seeds) < n:
@@ -148,17 +157,25 @@ def alt_deg2(graph, n):
                 del degs[node]
         i += 1
 
+    # Use the same seeds for all 50 rounds.
     return top_measure_same_50(list(seeds), n)
 
 def alt_deg1(graph, n):
-    """ Return num_seeds/2 highest degree nodes and ...."""
+    """ Return one highest-degree neighbor of the top highest-degree nodes.
+    This strategy aims to capture the high-degree nodes after one iteration,
+    since the high-degree nodes are generally unattainable as seed nodes."""
+    
+    # Gather top 2n highest-degree nodes.
     degs = nx.degree_centrality(graph)
     tops = heapq.nlargest(2*n, degs.items(), key=lambda x: x[1])
     tops = [tup[0] for tup in tops]
 
+    # Do not consider the top 2n highest-degree nodes as possible seeds.
     for node in tops[:n]:
         del degs[node]
 
+    # Gather the highest-degree neighbor from the highest-degree nodes, until
+    # n nodes have been accumulated.    
     seeds = set()
     i = 0
     while len(seeds) < n:
@@ -173,10 +190,13 @@ def alt_deg1(graph, n):
                 del degs[node]
         i += 1
 
+    # Use the same seeds for all 50 rounds.
     return top_measure_same_50(list(seeds), n)
 
 
 def alt2_kshp(graph, n):
+    """Combine a random sample of seeds chosen based on alt_deg2 and degree-
+    filtered, k-shell strategies."""
     global algs
     tops = set(alt_deg2(graph, n)[:n])
     tops.union(set(algs['dk'][1](graph, n)[:n]))
@@ -186,6 +206,8 @@ def alt2_kshp(graph, n):
     return seeds
 
 def alt2_ksh(graph, n):
+    """Uniformly combine seeds chosen based on alt_deg2 and degree-filtered,
+    k-shell strategies."""    
     global algs
     top_deg2 = alt_deg2(graph, n)[:n]
     top_dk = algs['dk'][1](graph, n)[:n]
@@ -201,7 +223,8 @@ def alt2_ksh(graph, n):
 
     return list(seeds) * 50
                      
-# A dict of all the centrality measures. {measure_flag: (measure_name, measure_function)}
+# A dict of all the centrality measures.
+# {measure_flag: (measure_name, measure_function)}
 measures = {'d': ('deg', nx.degree_centrality),
             'b': ('btw', nx.betweenness_centrality),
             'c': ('clu', nx.clustering),
@@ -219,17 +242,19 @@ gen_50 = {'': top_measure_same_50,
 algs = {}
 
 
-# Algorithms for pure measures
-
-pure_measure_func = lambda m_f: (lambda g, n: top_measure_same_50(top_n_measure(m_f, g.copy(), n), n))
+# Algorithms for pure measures.
+pure_measure_func = lambda m_f: (lambda g, n: top_measure_same_50(
+    top_n_measure(m_f, g.copy(), n), n))
 for m in measures:
     m_name, m_f = measures[m]
     algs[m] = (m_name, pure_measure_func(m_f))
 
 
-deg_flter = lambda m_f: (lambda g, n: top_measure_same_50(top_n_measure(m_f, top_n_measure(nx.degree_centrality, g.copy(), 3000, True)[1].copy(), n), n))
-# Algorithms for first degree measure filter and then with other measures and random generation
+deg_flter = lambda m_f: (lambda g, n: top_measure_same_50(top_n_measure(m_f,
+    top_n_measure(nx.degree_centrality, g.copy(), 3000, True)[1].copy(), n), n))
 
+
+# Algorithms for degree-filtered measures and others.
 for m in measures:
     m_name, m_f = measures[m]
     algs['d'+m] = ('deg' + m_name , deg_flter(m_f))
@@ -265,18 +290,12 @@ if __name__ == '__main__':
             else:
                 seeds = f(graph.copy(), n)
             write_seed(folder, g_name, seeds)
-            competitors[folder] = [seeds[n * i : n * (i + 1)] for i in range(50)]
+            competitors[folder] = \
+                [seeds[n * i : n * (i + 1)] for i in range(50)]
             print '-----'
 
 
+    # Show the performance of the various chosen algorithms when competing
+    # against each other.
     results = sim.run(adj_list, competitors, 1)
     print results
-
-
-    '''for alg in competitors:
-        competitors[alg] = 0
-    for result in results:
-        competitors[max(result[0].items(), key=lambda x: x[1])[0]] += 1
-    print competitors'''
-
-
